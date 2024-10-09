@@ -1,0 +1,21 @@
+---
+- name: Check Service
+  hosts: "{{ targets | default('ucilb') }}"
+  gather_facts: no
+  vars:
+    check_mode: true
+  tasks:
+    - name: Check Nginx Service
+      ansible.builtin.service:
+      #ansible.builtin.systemd_service:
+        name: nginx
+        state: started
+      register: result
+        
+    - name: Print fetched information - Service state
+      ansible.builtin.debug:
+        #msg: "{{ result }}"
+        #msg: "{{ inventory_hostname }} group: {{ group_names[1] }}"
+        msg: "State:{{ result.state }} , failed:{{ result.failed }} , changed:{{ result.changed }} , ExecMainStartTimestamp:{{ result.status.ExecMainStartTimestamp }}"
+      #when: group_names[1] == 'prod-cilb'
+      #when: "'prod_cilb' in group_names"

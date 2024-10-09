@@ -1,0 +1,53 @@
+---
+- name: Check HP server AMS status and store them locally
+  hosts: "{{ target | default('hpsrv') }}"
+  gather_facts: true
+  #vars_files: vars/mySecret.yml
+  tasks:
+    - name: delete /tmp/ams-stat.txt
+      file:
+        path: /tmp/ams-stat.txt
+        state: absent
+      run_once: true
+      delegate_to: localhost
+    
+    #- name: Debug ansible_facts
+    #  debug:
+    #    var: ansible_facts
+        
+    - name: collect facts about system services
+      ansible.builtin.service_facts:
+      register: services_state
+    
+    - name: Debug services_state
+      debug:
+        var: services_state
+      when: ansible_facts['hostname'] == "bq-oa-logsrv"
+    
+    - name: Check AMS package installed and version
+      shell: "rpm -qi amsd | grep Version | cut -d ':' -f2"
+      register: ams_version
+      changed_when: false
+      ignore_unreachable: yes
+      when: ansible_facts['product_name'] == "ProLiant DL380 Gen10"
+    
+    - name: Save AMS info to localhost
+      shell: "printf '%-20s %-50s \n' {{ inventory_hostname }} {{ ams_version.stdout_lines }} >> /tmp/ams-stat.txt"
+      delegate_to: localhost
+      notify: mailAMSStat
+      
+  handlers:
+    - name: mailAMSStat
+      mail:
+        host: smtp.taifex.com.tw # 
+        #host: so-net.net.tw
+        port: 25
+        to: tom@taifex.com.tw
+        from: admin@tfxans.taifex.com.tw
+        subject: Check AMS status
+        body: "{{ lookup('file','/tmp/ams-stat.txt') }}"
+        #username: svcmail
+        #assword: "{{ smtpPassword }}"
+        secure: try #starttls
+      run_once: true
+      delegate_to: localhost

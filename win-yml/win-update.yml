@@ -1,0 +1,27 @@
+---
+- name: Get Windows Update List
+  hosts: "{{ targets | default('test') }}"
+  connection: ansible.builtin.winrm
+  gather_facts: no
+  tasks:
+    - name: Start Windows Update
+      ansible.windows.win_updates:
+        category_names: "*"
+        state: installed 
+        reboot: true
+        log_path: C:\ansible_log.txt
+      #register: result
+    
+    - name: ReScan - Update GUI Info
+      ansible.windows.win_command:
+        cmd: usoclient StartScan
+    
+    - name: Check Latest InstalledOn Date
+      ansible.windows.win_powershell:
+        script: |
+          Get-HotFix | Select-Object Description,HotFixID,InstalledOn -Last 1
+      register: result
+    
+    - name: Print fetched information - InstalledOn Date
+      ansible.builtin.debug:
+        msg: "{{ result.output[0].InstalledOn }}"

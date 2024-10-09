@@ -1,0 +1,28 @@
+---
+- name: Check WK HandlePowerKey and ctrl-alt-del.target
+  hosts: "{{ target | default('wksrv') }}"
+  gather_facts: true
+  tasks:
+    - name: Ensure there is a 'HandlePowerKey=ignore' in [Login] section of /etc/systemd/logind.conf
+      community.general.ini_file:
+        path: /etc/systemd/logind.conf
+        section: Login
+        option: HandlePowerKey
+        value: ignore # 原始值：poweroff 期望值：ignore        
+      check_mode: yes
+      register: powerkey_setting
+
+    - name: set ctrl-alt-del.target masked
+      ansible.builtin.systemd:
+        name: ctrl-alt-del.target
+        enabled: no
+        masked: yes
+      check_mode: yes
+      register: combokey_state
+
+    - name: Print fetched information
+      ansible.builtin.debug:
+        #msg: "{{ combokey_state }} {{ powerkey_setting }}"
+        msg:
+          - "powerkey {{ powerkey_setting.msg }}: {{ powerkey_setting.diff.after }}"
+          - "ctrl-alt-del.target State: {{ combokey_state.status.ActiveState }}"

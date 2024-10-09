@@ -1,0 +1,33 @@
+
+[all:vars]
+ansible_connection=winrm
+ansible_winrm_port=5985
+ansible_winrm_server_cert_validation=ignore
+ansible_winrm_transport=credssp
+ansible_become=false
+ansible_winrm_user=oooo
+ansible_winrm_pass=xxxx
+
+[xmdb]
+umdb01 ansible_winrm_pass=xx
+umdba1 ansible_winrm_pass=xxx
+vmdb01 ansible_winrm_pass=
+vmdba1 ansible_winrm_pass=
+wmdb01 ansible_winrm_pass=
+wmdba1 ansible_winrm_pass=
+tmdb01
+tmdba1
+
+[infa]
+vinfadb01 
+vinfamk01 
+dinfadb01 
+dinfamk01 ansible_winrm_user=oo ansible_winrm_pass=xx
+dinfamk02 ansible_winrm_user=oo ansible_winrm_pass=xx 
+dinfadb02 
+uinfadb01 ansible_winrm_pass=
+uinfamk01 ansible_winrm_pass=
+winfadb01 
+winfamk01 
+sinfadb01 ansible_winrm_pass=
+

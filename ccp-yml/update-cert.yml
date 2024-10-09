@@ -1,0 +1,60 @@
+---
+- name: Update CCP Server Certificate File
+  hosts: "{{ targets | default('ucilb') }}"
+  gather_facts: no
+  tasks:
+    - name: Update and Backup cert, key file
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: /etc/nginx/conf.d/
+        owner: root
+        group: root
+        mode: '0644'
+        force: true
+        backup: yes
+        #backup_dir: /tmp/
+      loop:
+        - DomainCert.cer
+        - server.key
+        
+    - name: Update and Backup global file 
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: /etc/nginx/conf.d/
+        owner: root
+        group: root
+        mode: '0644'
+        force: true
+        backup: yes
+      loop:
+        - global.pass
+      when: "'prod_cilb' in group_names"
+    
+    - name: Update and Backup nginx.conf 
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: /etc/nginx/
+        owner: root
+        group: root
+        mode: '0644'
+        force: true
+        backup: yes
+      loop:
+        - nginx.conf
+      when: "'prod_cilb' in group_names"
+    
+    - name: Restart Nginx Service
+      ansible.builtin.service:
+        name: nginx
+        state: restarted
+        #check_mode: true #Unsupported parameters
+      register: result
+    
+    - name: Print fetched information - Service state
+      ansible.builtin.debug:
+        msg: "State:{{ result.state }} , failed:{{ result.failed }} , changed:{{ result.changed }} , ExecMainStartTimestamp:{{ result.status.ExecMainStartTimestamp }}"
+        
+    - name: Notify owner after checking the service status 
+      ansible.builtin.debug:
+        msg: "確認{{ inventory_hostname }}服務正常"
+      when: result.failed == False

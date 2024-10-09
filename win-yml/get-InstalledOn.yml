@@ -1,0 +1,43 @@
+---
+- name: Get Windows Update List
+  hosts: "{{ targets | default('test') }}"
+  connection: ansible.builtin.winrm
+  gather_facts: no
+  tasks:  
+    - name: Delete Temp File (chk-installedon-date.txt)
+      file:
+        path: /var/ans-project/chk-installedon-date.txt
+        state: absent
+      run_once: true
+      delegate_to: localhost
+    
+    - name: Check Latest InstalledOn Date
+      ansible.windows.win_powershell:
+        script: |
+          Get-HotFix | Select-Object Description,HotFixID,InstalledOn -Last 1
+      register: result
+    
+    - name: Save InstalledOn Date to localhost
+      #shell: "printf '%-20s %-12s %-12s %-30s \n' {{ inventory_hostname }} {{ result.output[0].Description }} {{ result.output[0].HotFixID }} {{ result.output[0].InstalledOn }} >> /var/ans-project/chk-installedon-date.txt"
+      shell: "printf '%-20s %-12s %-30s \n' {{ inventory_hostname }} {{ result.output[0].HotFixID }} {{ result.output[0].InstalledOn }} >> /var/ans-project/chk-installedon-date.txt"
+      delegate_to: localhost
+      notify: MailInstalledOn
+      
+    - name: Print fetched information - InstalledOn Date
+      ansible.builtin.debug:
+        msg: "{{ result.output[0].InstalledOn }}"
+
+  handlers:
+    - name: MailInstalledOn
+      mail:
+        host: smtp.taifex.com.tw # 
+        port: 25
+        to: "{{ mail_list }}"
+        from: admin@tfxans.taifex.com.tw
+        subject: Check InstalledOn Date
+        body: "{{ lookup('file','/var/ans-project/chk-installedon-date.txt') }}"
+        #username: svcmail
+        #assword: "{{ smtpPassword }}"
+        secure: try #starttls
+      run_once: true
+      delegate_to: localhost

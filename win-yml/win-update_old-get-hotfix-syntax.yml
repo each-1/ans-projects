@@ -1,0 +1,47 @@
+---
+- name: Get Windows Update List
+  hosts: "{{ targets | default('test') }}"
+  connection: ansible.builtin.winrm
+  gather_facts: no
+  vars:
+    ansible_winrm_port: 5985 # 5986
+    ansible_winrm_server_cert_validation: ignore
+    ansible_winrm_transport: ntlm # ntlm plaintext basic 
+    ansible_winrm_message_encryption: auto
+    ansible_winrm_operation_timeout_sec: 5
+    #ansible_winrm_scheme: http
+    #ansible_connection: winrm
+  tasks:
+    - name: Start Windows Update
+      ansible.windows.win_updates:
+        category_names: "*"
+        state: installed 
+        reboot: true
+        log_path: C:\ansible_log.txt
+      #register: result
+    
+    - name: ReScan - Update GUI Info
+      ansible.windows.win_command:
+        cmd: usoclient StartScan
+    
+    - name: Check Latest InstalledOn Date
+      ansible.windows.win_powershell:
+        script: |
+          $Results = @()
+          $servers = $localhost
+          foreach ($servers in $servers){
+          $Properties = @{
+          NetBIOS_Name = Get-WmiObject Win32_OperatingSystem -ComputerName $servers | select -ExpandProperty CSName
+          Description = gwmi win32_quickfixengineering -computer $servers | ?{ $_.installedon }| sort @{e={[datetime]$_.InstalledOn}} | select -last 1 | select -ExpandProperty Description
+          HotFixID = gwmi win32_quickfixengineering -computer $servers | ?{ $_.installedon }| sort @{e={[datetime]$_.InstalledOn}} | select -last 1 | select -ExpandProperty HotFixID
+          InstalledBy = gwmi win32_quickfixengineering -computer $servers | ?{ $_.installedon }| sort @{e={[datetime]$_.InstalledOn}} | select -last 1 | select -ExpandProperty InstalledBy
+          InstalledOn = gwmi win32_quickfixengineering -computer $servers | ?{ $_.installedon }| sort @{e={[datetime]$_.InstalledOn}} | select -last 1 | select -ExpandProperty InstalledOn
+          }
+          $Results += New-object psobject -Property $Properties
+          } 
+          $Results | Select-Object NetBIOS_Name,Description,HotFixID, InstalledBy, InstalledOn
+      register: result
+    
+    - name: Print fetched information - InstalledOn Date
+      ansible.builtin.debug:
+        msg: "{{ result }}"

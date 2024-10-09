@@ -1,0 +1,18 @@
+---
+- name: Get Windows Update List
+  hosts: "{{ targets | default('test') }}"
+  connection: ansible.builtin.winrm
+  gather_facts: no
+  tasks:
+    - name: Get List
+      ansible.windows.win_updates:
+        category_names: "*"
+        state: searched 
+        #log_path: C:\ansible_log.txt
+      register: result
+
+    - name: Print fetched information - found_update_count
+      ansible.builtin.debug:
+        msg: "{{ result.found_update_count }} : {{ result.updates }}"
+        #msg: "{{ result }}"
+        #msg: "{{ result.found_update_count }}"
